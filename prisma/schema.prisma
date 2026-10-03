@@ -1,0 +1,93 @@
+// FrigoAi - Prisma schema
+// AI-powered anti-waste fridge & meal planner
+// Postgres provider (PGlite adapter in dev, real Postgres in prod).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgres"
+  url      = env("DATABASE_URL")
+}
+
+// FrigoAi user account (email + phone + password)
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  phone        String   // required French phone, e.g. "+33600000000"
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  fridgeItems  FridgeItem[]
+  mealPlans    MealPlan[]
+  groceryItems GroceryItem[]
+
+  @@index([email])
+}
+
+// Items stored in the user's fridge
+model FridgeItem {
+  id             String   @id @default(cuid())
+  name           String
+  category       String   @default("Autre") // Fruits, Légumes, Produits laitiers, Viandes & Poissons, Féculents, Surgelés, Boissons, Autre
+  quantity       Float    @default(1)
+  unit           String   @default("pièce") // pièce, g, kg, L, ml, boîte, tranche...
+  expirationDate DateTime
+  addedAt        DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  emoji          String   @default("📦")
+  usedInPlan     Boolean  @default(false)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expirationDate])
+  @@index([category])
+}
+
+// AI-generated meal plan for a given day
+model MealPlan {
+  id        String   @id @default(cuid())
+  date      DateTime
+  dayName   String
+  breakfastTitle String
+  breakfastCal   Int
+  breakfastTime  String
+  lunchTitle     String
+  lunchCal       Int
+  lunchTime      String
+  dinnerTitle    String
+  dinnerCal      Int
+  dinnerTime     String
+  wasteSavedPercent Int   @default(0)
+  fridgeItemIds  String  @default("") // comma-separated ids used
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId])
+}
+
+// Missing groceries derived from meal plan
+model GroceryItem {
+  id        String   @id @default(cuid())
+  item      String
+  qty       String
+  store     String   @default("Supermarché")
+  checked   Boolean  @default(false)
+  estimatedPrice Float @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
