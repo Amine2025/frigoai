@@ -1,0 +1,7 @@
+node_modules/
+.next/
+db/
+dev.log
+dev-watcher.log
+*.log
+.env.local
